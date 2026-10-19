@@ -30,6 +30,11 @@ export class Document extends Container {
     return this.#height;
   }
 
+  /** 画布内的元素总数（不含根 svg），用于 save / read 回显。 */
+  get size(): number {
+    return this.#index.size;
+  }
+
   resize(width: number, height: number): void {
     this.#width = width;
     this.#height = height;
@@ -61,9 +66,24 @@ export class Document extends Container {
   /** 挂入新图形：省略 parentId 挂根；id 冲突 / 父不存在 / 父非容器在此报错。 */
   add(shape: Shape, parentId?: string): void {
     this.#assertIdFree(shape);
-    const parent = parentId === undefined ? this : this.#container(parentId);
+    const parent = parentId === undefined ? this : this.container(parentId);
     parent.attach(shape);
     this.#register(shape);
+  }
+
+  /** 已被 remove 的图形（delete / ungroup 的 undo）原地放回。 */
+  restore(shape: Shape, parent: Container, index: number): void {
+    this.#assertIdFree(shape);
+    parent.insertAt(index, shape);
+    this.#register(shape);
+  }
+
+  /** 文档内换位（z-order / addto 的 undo）；仍在索引中，只调整父子关系。 */
+  reparent(shape: Shape, parent: Container, index: number): void {
+    const from = shape.parent;
+    if (from === null) throw new EditorError(`no such shape: ${shape.id}`);
+    from.detach(shape);
+    parent.insertAt(index, shape);
   }
 
   /** 连同整棵子树摘除并注销。 */
@@ -76,11 +96,11 @@ export class Document extends Container {
 
   /** 已在文档中的图形换父（addto / group 收编）；id 不变，索引无需改动。 */
   moveTo(shape: Shape, parentId: string): void {
-    const target = this.#container(parentId);
+    const target = this.container(parentId);
     const from = shape.parent;
     if (from === null) throw new EditorError(`no such shape: ${shape.id}`);
     if (from === target) return;
-    if (this.isAncestor(shape, target)) {
+    if (shape === target || this.isAncestor(shape, target)) {
       throw new EditorError(`cannot move into own descendant: ${shape.id}`);
     }
     target.attach(shape);
@@ -94,10 +114,13 @@ export class Document extends Container {
     return false;
   }
 
-  #container(id: string): Shape {
+  /** 按 id 取容器；缺失与"不是容器"分别报不同错误。 */
+  container(id: string): Container {
     const shape = this.#index.get(id);
     if (shape === undefined) throw new EditorError(`no such container: ${id}`);
-    return shape;
+    const container = shape.asContainer();
+    if (container === null) throw new EditorError(`not a container: ${id}`);
+    return container;
   }
 
   #assertIdFree(shape: Shape): void {

@@ -18,6 +18,10 @@ export class Line extends Shape {
     return 'line';
   }
 
+  override anchor(): { x: number; y: number } {
+    return { x: this.#x1, y: this.#y1 };
+  }
+
   override move(dx: number, dy: number): void {
     this.#x1 += dx;
     this.#y1 += dy;

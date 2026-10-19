@@ -14,6 +14,10 @@ export abstract class Container extends Shape {
     this.#children.push(child);
   }
 
+  override asContainer(): Container {
+    return this;
+  }
+
   insertAt(index: number, child: Shape): void {
     child.parent = this;
     this.#children.splice(index, 0, child);

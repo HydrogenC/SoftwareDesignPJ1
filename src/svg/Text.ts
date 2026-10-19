@@ -16,6 +16,14 @@ export class Text extends Shape {
     return 'text';
   }
 
+  override anchor(): { x: number; y: number } {
+    return { x: this.#x, y: this.#y };
+  }
+
+  override getAttribute(attr: string): string | undefined {
+    return attr === 'text' ? this.#content : super.getAttribute(attr);
+  }
+
   override move(dx: number, dy: number): void {
     this.#x += dx;
     this.#y += dy;

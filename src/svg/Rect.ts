@@ -18,6 +18,10 @@ export class Rect extends Shape {
     return 'rect';
   }
 
+  override anchor(): { x: number; y: number } {
+    return { x: this.#x, y: this.#y };
+  }
+
   override move(dx: number, dy: number): void {
     this.#x += dx;
     this.#y += dy;

@@ -16,6 +16,10 @@ export class Circle extends Shape {
     return 'circle';
   }
 
+  override anchor(): { x: number; y: number } {
+    return { x: this.#cx, y: this.#cy };
+  }
+
   override move(dx: number, dy: number): void {
     this.#cx += dx;
     this.#cy += dy;

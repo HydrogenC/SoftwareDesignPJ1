@@ -1,13 +1,19 @@
 import type { Container } from './Container.js';
 import { EditorError } from './EditorError.js';
 
+export interface Point {
+  x: number;
+  y: number;
+}
+
 export abstract class Shape {
   readonly #id: string;
   parent: Container | null = null;
 
-  protected fill?: string;
-  protected stroke?: string;
-  protected strokeWidth?: string;
+  // 不用 `?`：unsetAttribute 需要把已存在的属性显式置回 undefined。
+  protected fill: string | undefined = undefined;
+  protected stroke: string | undefined = undefined;
+  protected strokeWidth: string | undefined = undefined;
 
   protected constructor(id: string) {
     this.#id = id;
@@ -34,6 +40,16 @@ export abstract class Shape {
     throw new EditorError(`not a container: ${this.id}`);
   }
 
+  /** 容器覆写返回自身；叶子为 null，供命令做"能否容纳"判断。 */
+  asContainer(): Container | null {
+    return null;
+  }
+
+  /** 左上/中心锚点，仅用于 move 后的位置回显；容器没有单一锚点。 */
+  anchor(): Point | null {
+    return null;
+  }
+
   abstract move(dx: number, dy: number): void;
 
   abstract scale(factor: number): void;
@@ -42,6 +58,28 @@ export abstract class Shape {
     if (this.setPaint(attr, value)) return;
     if (this.setGeometry(attr, value)) return;
     throw new EditorError(`unknown attribute: ${attr}`);
+  }
+
+  /** 取当前值，供 set 的 undo 记录旧值；未设置的绘制属性返回 undefined。 */
+  getAttribute(attr: string): string | undefined {
+    return this.svgAttributes().find(([name]) => name === attr)?.[1];
+  }
+
+  /** set 前属性本不存在时，undo 用它恢复"未设置"状态。 */
+  unsetAttribute(attr: string): void {
+    switch (attr) {
+      case 'fill':
+        this.fill = undefined;
+        return;
+      case 'stroke':
+        this.stroke = undefined;
+        return;
+      case 'stroke-width':
+        this.strokeWidth = undefined;
+        return;
+      default:
+        throw new EditorError(`cannot unset attribute: ${attr}`);
+    }
   }
 
   /** tree 的一行：几何与绘制属性内联。 */
