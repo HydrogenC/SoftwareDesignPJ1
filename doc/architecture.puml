@@ -1,0 +1,30 @@
+@startuml
+!pragma layout smetana
+skinparam dpi 180
+skinparam componentStyle rectangle
+skinparam defaultFontName "Microsoft YaHei"
+skinparam shadowing false
+skinparam ArrowColor #555555
+skinparam ComponentBorderColor #888888
+skinparam ComponentBackgroundColor #F8F8F8
+
+component "index.ts（组装根）" as index
+component "cli/" as cli
+component "commands/" as commands
+component "io/" as io
+component "registry/" as registry
+component "svg/" as svg
+
+index --> cli
+index --> commands
+index --> io
+index --> registry
+cli --> commands
+cli --> svg
+commands --> svg
+commands ..> registry : ShapeFactory
+commands ..> io : 经 CommandContext 注入
+io --> svg
+io --> registry : 读入时建形状
+registry --> svg
+@enduml
