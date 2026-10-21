@@ -1,5 +1,9 @@
 # SVG 编辑器 CLI（Lab1 Phase 1）
 
+**作者**：23300220005 许颖忱
+
+**云端仓库地址**：https://github.com/HydrogenC/SoftwareDesignPJ1
+
 在 REPL 中创建和编辑 SVG 图形，支持分组、树形查看、SVG 读写以及 undo/redo。
 
 ## 架构方案
@@ -55,11 +59,12 @@
 
 ## 过程记录
 
-- 先定 `Shape` 基类的职责，再按依赖顺序从 `svg/` 往上实现。Composite 的 `attach` / `asContainer` / `anchor` 是在写命令前敲定的，避免后面在命令里到处做强转和类型判断。
-- 讨论模块方案时，最初考虑过拆 `app/`（流程编排）和 `repl/`（交互）；评估后发现 `app/` 只会做几行转发，决定合并进 `cli/`，由 `index.ts` 装配。这个修订在实施前完成，最终目录与上文一致。
-- 展示口径做过一次取舍：规范里手写的 tree/show 样例没有列全已设置的绘制属性。我选择统一输出全部已设置属性，保证同类图形显示规则一致；这是有意偏差，记在修订记录里。
-- 类型检查抓到过几个问题：`exactOptionalPropertyTypes` 下不能给可选字段赋 `undefined`，绘制属性改成显式 `string | undefined`；`SvgReader` 的构造函数需要 `ShapeFactory`，最初漏传，后来在 `index.ts` 共享同一个工厂；`GroupCommand` / `UngroupCommand` 也有 import 和类型引用问题。都是编译期发现并修掉的。
-- 回放组合命令时，`addto node1` 一度报找不到 node1。追查后是脚本前面的 `ungroup` + `redo` 先把 node1 删掉了，不是实现问题。组合场景不能只看单条命令是否成功。
+- 先出架构、我审核，再分层实现，没有让 AI 一口气生成整个项目。开工前 AI 把关键设计点列成决策清单（`Shape` 基类的职责边界、Composite 的公共原语、命令与历史的划分、模块划分、tree/show 展示口径），我逐条审核；前四项确认后才进入编码，展示口径一项授权 AI 自行决定。
+- 模块划分来回过一轮：AI 给出分层方案（`app/` 编排 + `repl/` 交互）和合并方案，我选了合并——`app/` 实际只会做几行转发，合并进 `cli/` 后由 `index.ts` 装配。方案在开工前定稿。
+- 实现按依赖拓扑自底向上分层推进：`svg/` 基类与叶子类 → `Container` / `Document` 原语 → `commands/` → `cli/` 组装。每完成一层先停下来审核（例如“审核通过，请继续实现 svg/ 包下的其他子类”），确认后才进入下一层。
+- git 历史按同样节奏分成四次提交（脚手架、svg 基类、命令类、CLI 与组装），没有一次性大提交。
+- 每层都配合编译和回放验证。AI 产出里被查出过几处问题：`exactOptionalPropertyTypes` 下不能给可选字段赋 `undefined`，绘制属性改成显式 `string | undefined`；`SvgReader` 构造函数漏传 `ShapeFactory`；`GroupCommand` / `UngroupCommand` 有 import 和类型引用问题。都是编译期发现并修掉的。
+- 回放规范第 6 节的组合命令时，`addto node1` 一度报找不到 node1。追查后是脚本前面的 `ungroup` + `redo` 先把 node1 删掉了，不是实现问题；组合场景的验证脚本本身也要审查。
 
 ## 一致性自查
 
