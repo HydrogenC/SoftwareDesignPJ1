@@ -11,7 +11,8 @@
   "scripts": {
     "cli": "tsx src/index.ts",
     "build": "tsc",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test test/phase1-baseline.test.mjs"
   },
   "keywords": [],
   "author": "",

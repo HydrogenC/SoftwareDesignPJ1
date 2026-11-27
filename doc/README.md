@@ -81,4 +81,4 @@
 - 规范回归：把规范第 6 节的完整对话逐条回放，对照 banner、tree 对齐、命令回显、undo/redo 结果和 save 后的历史锁，输出与题面一致。
 - 组合与边界场景：覆盖了 group 跨父节点、ungroup/addto/front/back 的撤销、canvas 改尺寸后的锁、read 缺 id 的自动编号与警告、未知标签跳过、实体转义、save/read 往返，以及文档中列出的错误消息。
 - 可视验证：生成了 `examples/minimal.svg`、`examples/demo.svg`、`examples/flowchart.svg`，用浏览器打开确认结构正确。
-- 局限：没有引入自动化测试框架，回归目前靠脚本化 REPL 回放和人工比对。当前命令集不大还能接受；如果继续加插件和命令，下一步应该补命令级集成测试。
+- Phase 1 回归基线可用 `npm test` 自动验证。会话、输入 SVG 和预期输出均已固化在 [doc/transcript](transcript/README.md)。

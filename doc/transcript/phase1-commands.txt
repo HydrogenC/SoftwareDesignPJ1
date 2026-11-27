@@ -1,0 +1,56 @@
+# 补充 §6 和 §6.1 版本 A 未覆盖的内置命令与历史行为。
+help
+tree
+init
+undo
+canvas
+create box future 0 0 10 10 "未来节点"
+
+create g outer
+create g inner in outer
+create rect r1 8 12 16 20 in inner
+create line edge 0 0 8 12 black in outer
+show r1
+set r1 label "未定义属性"
+set r1 fill red
+undo
+show r1
+redo
+scale r1 2
+show r1
+undo
+
+addto outer r1
+tree outer
+undo
+tree inner
+redo
+front inner
+tree outer
+undo
+back r1
+tree outer
+undo
+addto inner r1
+ungroup inner
+tree outer
+undo
+tree outer
+redo
+
+canvas 640 480
+undo
+move r1 1 2
+undo
+read missing.svg
+redo
+canvas
+tree
+
+# 成功读入替换文档后，旧历史被清空，并锁住 undo/redo。
+read other.svg
+undo
+redo
+create g imported
+undo
+undo

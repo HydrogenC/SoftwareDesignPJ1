@@ -1,0 +1,104 @@
+svg-editor 0.1 — type 'help' for commands
+
+commands:
+  init [w] [h]                     new canvas (default 800x600)
+  read <file.svg>                  load an SVG document
+  save [file.svg]                  save the current document
+  canvas [w] [h]                   show or resize the canvas
+
+  create <type> <id> [params] [in <containerId>]
+      rect    <x> <y> <w> <h> [fill]
+      circle  <cx> <cy> <r> [fill]
+      ellipse <cx> <cy> <rx> <ry> [fill]
+      line    <x1> <y1> <x2> <y2> [stroke]
+      text    <x> <y> "content"
+      g
+  delete <id>
+  move <id> <dx> <dy>
+  scale <id> <factor>
+  set <id> <attr> <value>
+  group <newGid> <id1> <id2>...
+  ungroup <gid>
+  addto <gid> <id>
+  front <id>
+  back <id>
+
+  tree [id]                        show the structure tree
+  show <id>                        show shape attributes
+  help                             show this help
+  undo                             undo the last edit
+  redo                             redo the last undone edit
+
+  a line starting with # is a comment; quote arguments containing spaces
+error: no document. use 'init' or 'read' first
+canvas 800x600 created
+error: undo not allowed after io command
+canvas 800x600
+error: unknown shape type: box (is the plugin loaded?)
+g#outer created
+g#inner created in g#outer
+rect#r1 created in g#inner
+line#edge created in g#outer
+rect#r1  parent=g#inner
+  x=8 y=12 w=16 h=20
+error: unknown attribute: label
+rect#r1 updated: fill=red
+rect#r1 updated: fill unset
+rect#r1  parent=g#inner
+  x=8 y=12 w=16 h=20
+rect#r1 updated: fill=red
+rect#r1 scaled by 2
+rect#r1  parent=g#inner
+  x=16 y=24 w=32 h=40
+  fill=red
+rect#r1 scaled back by 0.5
+rect#r1 added to g#outer
+g#outer
+├── g#inner
+├── line#edge  (0,0) -> (8,12) stroke=black
+└── rect#r1    x=8 y=12 w=16 h=20 fill=red
+rect#r1 moved back to g#inner
+g#inner
+└── rect#r1  x=8 y=12 w=16 h=20 fill=red
+rect#r1 added to g#outer
+g#inner moved to front
+g#outer
+├── line#edge  (0,0) -> (8,12) stroke=black
+├── rect#r1    x=8 y=12 w=16 h=20 fill=red
+└── g#inner
+g#inner z-order restored
+rect#r1 moved to back
+g#outer
+├── rect#r1    x=8 y=12 w=16 h=20 fill=red
+├── g#inner
+└── line#edge  (0,0) -> (8,12) stroke=black
+rect#r1 z-order restored
+rect#r1 added to g#inner
+g#inner ungrouped (1 child)
+g#outer
+├── rect#r1    x=8 y=12 w=16 h=20 fill=red
+└── line#edge  (0,0) -> (8,12) stroke=black
+g#inner restored with 1 child
+g#outer
+├── g#inner
+│   └── rect#r1  x=8 y=12 w=16 h=20 fill=red
+└── line#edge    (0,0) -> (8,12) stroke=black
+g#inner ungrouped (1 child)
+canvas resized to 640x480
+error: undo not allowed after io command
+rect#r1 moved to (9,14)
+rect#r1 moved back to (8,12)
+error: cannot read file: missing.svg
+rect#r1 moved to (9,14)
+canvas 640x480
+svg (640x480)
+└── g#outer
+    ├── rect#r1    x=9 y=14 w=16 h=20 fill=red
+    └── line#edge  (0,0) -> (8,12) stroke=black
+warning: assigned id rect1 to unnamed <rect>
+read other.svg (7 elements)
+error: undo not allowed after io command
+error: undo not allowed after io command
+g#imported created
+g#imported removed
+error: nothing to undo
