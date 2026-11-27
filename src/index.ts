@@ -13,6 +13,7 @@ const codePlugins: readonly {
   { load: () => import('./plugins/stats/StatsPlugin.js') },
   { load: () => import('./plugins/dir/DirPlugin.js') },
   { load: () => import('./plugins/box/BoxPlugin.js') },
+  { load: () => import('./plugins/modified-star/ModifiedStarPlugin.js') },
 ];
 const report = (message: string): void => console.log(message);
 const host = new PluginHost(report);

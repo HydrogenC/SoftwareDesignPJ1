@@ -133,7 +133,7 @@ code --user-data-dir "$svgTestProfile" --extensions-dir "$svgTestProfile/extensi
 
 ## Phase 2 · CLI 插件框架
 
-[Phase 1 模块依赖图](architecture.puml)与 [Phase 2 模块依赖图](architecture-phase2.puml)标出重构前后的依赖方向。[ADR](cli-plugin-adr.md)记录属性事务、读回与结构约束、注册与清单校验。[指标报告](../docs/metrics/framework.md)由 Git 数据生成。
+[Phase 1 模块依赖图](architecture.puml)与 [Phase 2 模块依赖图](architecture-phase2.puml)标出重构前后的依赖方向。[ADR](cli-plugin-adr.md)记录属性事务、读回与结构约束、注册与清单校验以及未保存标记。[指标报告](../docs/metrics/framework.md)由 Git 数据生成。
 
 ### 扩展点清单
 
@@ -143,7 +143,7 @@ code --user-data-dir "$svgTestProfile" --extensions-dir "$svgTestProfile/extensi
 | --- | --- | --- | --- | --- |
 | `ShapeProvider` | [ShapeFactory.ts](../src/registry/ShapeFactory.ts) 的 `create`、`forSvg`、`fromSvg` 负责创建和读回，由 [SvgReader.ts](../src/io/SvgReader.ts) 的 `#readChildren` 调用读回路径 | `BuiltinShapeProvider` 的六个实例、`BoxProvider`。测试用 `CompositeProvider` | 基础六种类型可创建。未注册类型的 `create` 报 `error: unknown shape type`，未启用 `BoxProvider` 时将标记为 `box` 的 `<g>` 读为普通组，未知标签跳过 | 返回的图形须与请求的 ID、类型、SVG 标签一致，且尚未挂入父容器。读回返回已带子节点的图形时，报 `error: shape provider <name> failed: ...`。`BoxProvider` 拒绝缺少必要子部件或子部件类型不符的输入 |
 | `Command`、`CommandDefinition` | [CommandRouter.ts](../src/cli/CommandRouter.ts) 的 `run` 从注册表构造命令，`CommandHistory.execute` 执行。`EditorSession.helpLines` 读取命令提供的文案 | 所有 Phase 1 命令，包括 `undo`、`redo`，以及可选的 `stats` 和 `dir`。测试用 `SampleDefinition` 和 `SampleCommand` | 命令名、输出格式和历史行为沿用 Phase 1。缺少注册时执行报 `error: unknown command: <name>`，帮助中不显示 | 返回值须为 `Command` 实例且类别有效，`help` 须返回字符串。违反时报 `error: command <name> failed: ...` |
-| `TreeDecorator` | [TreeFormatter.ts](../src/cli/TreeFormatter.ts) 的 `#suffix` 在排版后追加标签。[EditorSession.ts](../src/commands/EditorSession.ts) 的 `#publish` 提供新建、读入和保存事件 | `BoxTypeLabel`。测试用两个独立 `TreeLabel` 实例 | 树输出逐字节保留 Phase 1 排版 | 返回多行或非字符串值，或抛出异常，报告 `error: tree decorator <name> failed: ...` |
+| `TreeDecorator` | [TreeFormatter.ts](../src/cli/TreeFormatter.ts) 的 `#suffix` 在排版后追加标签。[EditorSession.ts](../src/commands/EditorSession.ts) 的 `#publish` 提供新建、读入和保存事件 | `BoxTypeLabel`、`ModifiedStar`。测试用两个独立 `TreeLabel` 实例 | 树输出逐字节保留 Phase 1 排版 | 返回多行或非字符串值，或抛出异常，报告 `error: tree decorator <name> failed: ...` |
 | `AttributeHandler` | [AttributeEdit.ts](../src/extensions/AttributeEdit.ts) 的 `apply` 选择处理器并记录事务，由 `EditorSession.setAttribute` 提供给 `set` | `BoxAttributes` 处理框体的 `fill` 和 `label`。测试用 `PaintHandler` | 命中为空时沿用图形属性白名单。未知属性报 `error: unknown attribute: <attr>` | 多个处理器命中时报 `error: conflicting attribute handlers ...`。处理器异常会回滚已完成的属性更新。普通异常报告 `error: attribute handler <name> failed: ...` |
 
 扩展点的注册错误统一由 [PluginHost.ts](../src/host/PluginHost.ts) 的 `load` 处理。同类名称重复报 `error: duplicate registration: <category>/<name>`。清单和实际注册集合不符时报 `error: plugin manifest mismatch: ...`，激活异常时报 `error: plugin failed to activate: ...`。三种失败都丢弃这次激活的全部注册。
@@ -160,7 +160,7 @@ node dist/index.js --config plugins.config.json
 
 `npm run cli` 也可启动 CLI，运行前会自动构建。代码与配置装配均使用编译后的公开 API，保证宿主和插件共享同一份 `Command` 基类。从其他工作目录启动时，可直接用 `node` 执行编译入口的绝对路径。
 
-`--no-plugins` 只加载内置插件。`--config` 使用配置项决定可选插件集合。仓库的 [plugins.config.json](../plugins.config.json) 与当前代码装配按相同顺序启用 `stats`、`dir` 和 `box`。给任一项设置 `enabled: false` 即可单独禁用。`module` 支持已安装的模块名，以及相对配置目录的编译后入口文件或包目录。目录由其 `package.json` 的 `main` 指定入口，包名按 ESM 包解析。两种路径都要求模块默认导出带 `activate` 的实例，`package.json` 的 `contributes` 可声明 `shapes`、`commands`、`decorators`、`attributes` 四类名称列表，缺省为空。宿主把 `options` 原值传到 `activate` 的第二个参数。
+`--no-plugins` 只加载内置插件。`--config` 使用配置项决定可选插件集合。仓库的 [plugins.config.json](../plugins.config.json) 与当前代码装配按相同顺序启用 `stats`、`dir`、`box` 和 `modified-star`。给任一项设置 `enabled: false` 即可单独禁用。`module` 支持已安装的模块名，以及相对配置目录的编译后入口文件或包目录。目录由其 `package.json` 的 `main` 指定入口，包名按 ESM 包解析。两种路径都要求模块默认导出带 `activate` 的实例，`package.json` 的 `contributes` 可声明 `shapes`、`commands`、`decorators`、`attributes` 四类名称列表，缺省为空。宿主把 `options` 原值传到 `activate` 的第二个参数。
 
 ```json
 {
@@ -192,6 +192,12 @@ node dist/index.js --config plugins.config.json
 从 M3 的 `8844109` 接入时，两种装配都新增 `src/plugins/box/`。代码装配在 `src/index.ts` 加一个导入项，直接运行编译入口。配置装配在 `plugins.config.json` 加一个模块路径，用 `--config plugins.config.json` 启动。已从该基线分别构建上述两个版本，流程图会话的标准输出和 SVG 均与预期逐字节一致。
 
 构建后可用 `node --test test/box-plugin.test.mjs test/box-cli.test.mjs` 运行 [插件独立测试](../test/box-plugin.test.mjs)和 [CLI 验收](../test/box-cli.test.mjs)。[流程图会话](transcript/flowchart-box.txt)分别验证两种装配的标准输出和保存的 SVG。读回、子部件保护和 ID 检查见 [ADR §2](cli-plugin-adr.md#2-特殊图形读回与结构不变量)。
+
+### 未保存标记 `modified-star`
+
+成功保存或读入后，`tree` 按当前内容与基准的差异标记节点和祖先。撤销回基准时星号消失。`init` 后的新画布和后续新建的节点立即标记。默认按注册顺序显示 `g#n1 (box) *`。设置 `modified-star` 的配置项为 `enabled: false` 时仍可看到 `(box)`。[状态、传播和拼接规则](cli-plugin-adr.md#4-未保存标记与祖先传播)
+
+构建后可用 `node --test test/modified-star.test.mjs` 运行 [独立测试](../test/modified-star.test.mjs)。[CLI 验收](../test/box-cli.test.mjs)覆盖保存、再次编辑、撤销、重做与读入，并比较双标签启用时的两种装配输出。
 
 ### AI 建议检查记录
 

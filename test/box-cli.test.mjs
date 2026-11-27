@@ -10,6 +10,7 @@ import { PluginHost } from '../dist/host/PluginHost.js';
 import box, { manifest as boxManifest } from '../dist/plugins/box/BoxPlugin.js';
 import BuiltinPlugin from '../dist/plugins/builtin/BuiltinPlugin.js';
 import builtin from '../dist/plugins/builtin/package.json' with { type: 'json' };
+import modifiedStar, { manifest as starManifest } from '../dist/plugins/modified-star/ModifiedStarPlugin.js';
 
 const cli = fileURLToPath(new URL('../dist/index.js', import.meta.url));
 const config = fileURLToPath(new URL('../plugins.config.json', import.meta.url));
@@ -21,30 +22,87 @@ function temporaryDirectory(t) {
   return path;
 }
 
-async function editorWithBox(enabled = true) {
+async function editorWithBox({ boxEnabled = true, starEnabled = false } = {}) {
   const host = new PluginHost(assert.fail);
   assert.equal(await host.load(new BuiltinPlugin(), builtin), true);
-  if (enabled) assert.equal(await host.load(box, boxManifest), true);
+  if (boxEnabled) assert.equal(await host.load(box, boxManifest), true);
+  if (starEnabled) assert.equal(await host.load(modifiedStar, starManifest), true);
   return createEditor(host.registrations, assert.fail);
 }
 
-test('the Phase 1 box session gives identical stdout and SVG in both assemblies', t => {
-  const cwd = temporaryDirectory(t);
+function assertBoxReplay(cwd, args, stdoutFixture) {
   const target = join(cwd, 'flowchart-box.svg');
   const input = readFileSync(new URL('flowchart-box.txt', transcripts));
-  const expectedOutput = readFileSync(new URL('expected/flowchart-box.stdout.txt', transcripts));
+  const expectedOutput = readFileSync(new URL(`expected/${stdoutFixture}`, transcripts));
   const expectedSvg = readFileSync(new URL('expected/flowchart-box.svg', transcripts));
+  const result = spawnSync(process.execPath, [cli, ...args], { cwd, input, timeout: 10_000 });
+  if (result.error) throw result.error;
+  assert.equal(result.status, 0, result.stderr.toString());
+  assert.equal(result.stderr.toString(), '');
+  assert.equal(result.stdout.toString(), expectedOutput.toString());
+  assert.deepEqual(result.stdout, expectedOutput);
+  assert.deepEqual(readFileSync(target), expectedSvg);
+  unlinkSync(target);
+}
 
+test('the Phase 1 box session with both labels gives identical stdout and SVG in both assemblies', t => {
+  const cwd = temporaryDirectory(t);
   for (const args of [[], ['--config', config]]) {
-    const result = spawnSync(process.execPath, [cli, ...args], { cwd, input, timeout: 10_000 });
-    if (result.error) throw result.error;
-    assert.equal(result.status, 0, result.stderr.toString());
-    assert.equal(result.stderr.toString(), '');
-    assert.equal(result.stdout.toString(), expectedOutput.toString());
-    assert.deepEqual(result.stdout, expectedOutput);
-    assert.deepEqual(readFileSync(target), expectedSvg);
-    unlinkSync(target);
+    assertBoxReplay(cwd, args, 'flowchart-box.modified-star.stdout.txt');
   }
+});
+
+test('disabling modified-star preserves the original box tree output', t => {
+  const cwd = temporaryDirectory(t);
+  const localConfig = join(cwd, 'plugins.config.json');
+  writeFileSync(localConfig, JSON.stringify({
+    plugins: [
+      { module: fileURLToPath(new URL('../dist/plugins/box', import.meta.url)) },
+      { module: fileURLToPath(new URL('../dist/plugins/modified-star', import.meta.url)), enabled: false },
+    ],
+  }));
+  assertBoxReplay(cwd, ['--config', localConfig], 'flowchart-box.stdout.txt');
+});
+
+test('the box and modified-star labels coexist through save, edit, undo, redo and read', async t => {
+  const editor = await editorWithBox({ starEnabled: true });
+  const cwd = temporaryDirectory(t);
+  const savedFile = join(cwd, 'saved.svg');
+  const missingFile = join(cwd, 'missing', 'broken.svg');
+
+  editor.run('init');
+  assert.equal(editor.run('tree'), 'svg (800x600) *');
+  editor.run('create g parent');
+  editor.run('create box n1 120 100 160 60 Original in parent');
+  assert.match(editor.run('tree n1'), /^g#n1 \(box\) \*\n/);
+  editor.run(`save "${savedFile}"`);
+  const clean = editor.run('tree');
+  assert.match(clean, /g#n1 \(box\)$/m);
+  assert.doesNotMatch(clean, /\*$/m);
+
+  editor.run('set n1 label Updated');
+  const dirty = editor.run('tree');
+  assert.match(dirty, /^svg \(800x600\) \*$/m);
+  assert.match(dirty, /g#parent \*$/m);
+  assert.match(dirty, /g#n1 \(box\) \*$/m);
+  assert.match(dirty, /text#n1-label .*"Updated" \*$/m);
+  assert.doesNotMatch(dirty, /rect#n1-rect .*\*$/m);
+  assert.equal(editor.run('tree n1-label'), 'text#n1-label (140,135) "Updated" *');
+
+  assert.throws(() => editor.run(`save "${missingFile}"`), /cannot write file/);
+  assert.throws(() => editor.run(`read "${missingFile}"`), /cannot read file/);
+  assert.equal(editor.run('tree'), dirty);
+  editor.run('undo');
+  assert.equal(editor.run('tree'), clean);
+  editor.run('redo');
+  assert.equal(editor.run('tree'), dirty);
+  editor.run(`read "${savedFile}"`);
+  assert.equal(editor.run('tree'), clean);
+
+  const starOnly = await editorWithBox({ boxEnabled: false, starEnabled: true });
+  starOnly.run(`read "${savedFile}"`);
+  starOnly.run('set n1-label text Updated');
+  assert.match(starOnly.run('tree'), /g#n1 \*$/m);
 });
 
 test('box fill and label each undo and redo in one command', async () => {
@@ -133,7 +191,7 @@ test('nested boxes move together, round-trip and degrade to regular groups', asy
   assert.match(editor.run('show outer-label'), /"New & Nested"/);
   assert.match(editor.run('show inner-label'), /"Inner"/);
 
-  const defaults = await editorWithBox(false);
+  const defaults = await editorWithBox({ boxEnabled: false });
   defaults.run(`read "${file}"`);
   assert.equal(defaults.run('tree'), before.replaceAll(' (box)', ''));
   assert.throws(() => defaults.run('set outer label disabled'), /unknown attribute: label/);
@@ -142,7 +200,7 @@ test('nested boxes move together, round-trip and degrade to regular groups', asy
 
 test('malformed box reads preserve the document and history, even with duplicate IDs', async t => {
   const editor = await editorWithBox();
-  const defaults = await editorWithBox(false);
+  const defaults = await editorWithBox({ boxEnabled: false });
   editor.run('init');
   editor.run('create rect keep 10 10 10 10');
   editor.run('move keep 2 0');

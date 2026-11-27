@@ -18,4 +18,4 @@
 
 ## Phase 2 复合图形会话
 
-[flowchart-box.txt](flowchart-box.txt) 复现 Phase 1 §6.1 版本 B，覆盖节点创建、分组、整体移动、属性处理、树标签和保存。两种装配的 [标准输出](expected/flowchart-box.stdout.txt) 和 [SVG](expected/flowchart-box.svg) 均作为逐字节比较基线。预期树沿用 CLI 的全树对齐和绘制属性显示，因此连线行包含 `stroke=black`。
+[flowchart-box.txt](flowchart-box.txt) 复现 Phase 1 §6.1 版本 B，覆盖节点创建、分组、整体移动、属性处理、树标签和保存。默认的 [双标签输出](expected/flowchart-box.modified-star.stdout.txt) 用于两种装配的逐字节比较。[仅启用 box 时的输出](expected/flowchart-box.stdout.txt) 用于单独禁用星号的回归验证。两者生成同一份 [SVG](expected/flowchart-box.svg)。预期树沿用 CLI 的全树对齐和绘制属性显示，因此连线行包含 `stroke=black`。
