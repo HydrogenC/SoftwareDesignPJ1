@@ -15,3 +15,7 @@
 ## Phase 2 命令插件会话
 
 [command-plugins.txt](command-plugins.txt) 覆盖未初始化时的 `dir`、空画布和嵌套图形的 `stats`、撤销和重做，以及从子目录读入 SVG。[预期标准输出](expected/command-plugins.stdout.txt)包含 `dir` 的排序结果和 `read` 后的历史锁回显。测试在同一个固定临时目录下分别用代码和配置装配回放，子目录里的 `other.svg` 来自 [input/other.svg](input/other.svg)，标准输出由测试进程从管道采集。
+
+## Phase 2 复合图形会话
+
+[flowchart-box.txt](flowchart-box.txt) 复现 Phase 1 §6.1 版本 B，覆盖节点创建、分组、整体移动、属性处理、树标签和保存。两种装配的 [标准输出](expected/flowchart-box.stdout.txt) 和 [SVG](expected/flowchart-box.svg) 均作为逐字节比较基线。预期树沿用 CLI 的全树对齐和绘制属性显示，因此连线行包含 `stroke=black`。

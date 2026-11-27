@@ -8,9 +8,13 @@
 
 ## 2. 特殊图形读回与结构不变量
 
-`ShapeFactory.forSvg` 优先选择名称与 `data-kind` 相同且支持当前 SVG 标签的 provider，缺省查找名称和标签相同的 provider。`SvgReader` 先收集显式 ID 并拒绝重复，再按源码顺序为未命名节点分配可用 ID。provider 收到已构造的直接子节点，可检查必要部件，然后返回尚未挂入文档的空图形。读入器统一挂载子节点并建立索引，读入成功后才替换当前文档。后续 `box` 的缺失或错类型部件由对应 provider 拒绝，未加载该 provider 时由 `g` 接管。
+`ShapeFactory.forSvg` 优先选择名称与 `data-kind` 相同且支持当前 SVG 标签的 provider，缺省查找名称和标签相同的 provider。`SvgReader` 先收集显式 ID 并拒绝重复，再按源码顺序为未命名节点分配可用 ID。provider 收到已构造的直接子节点，可检查必要部件，然后返回尚未挂入文档的空图形。读入器统一挂载子节点并建立索引，读入成功后才替换当前文档。
 
 容器用 `assertCanUngroup` 和 `assertCanRemove` 表达自身约束。换父和删除在修改前询问原父容器，批量分组和解组在修改结构前先检查涉及的全部节点。同父换序保留子节点归属。新增子树在挂载前检查其内部及与当前文档间的 ID 冲突。
+
+`BoxProvider` 通过公开的 `ShapeCreationContext.create` 构造 `<id>-rect` 和 `<id>-label`，由 `Document.add` 一次检查整棵新增子树。`Box` 保存为 `<g data-kind="box">`。加载插件时，读回要求两个派生 ID 对应类型正确的直接子节点。缺失、错类型或嵌套位置错误会拒绝整次读入，现有文档和历史保留。没有加载插件时，普通 `g` provider 接管并保留其可识别的 SVG 子节点。重复 ID 在分派 provider 前拒绝，两种装配的结果一致。
+
+`Box` 允许额外子节点和嵌套。两个必要部件不能直接删除或换父，支持同父换序。插件按派生 ID 定位部件，因此换序后仍可设置属性和读回。整棵 `box` 子树仍可整体移动、加入分组或删除。`BoxAttributes` 只处理 `fill` 和 `label`，分别通过写入器修改矩形的 `fill` 与文字的 `text`。从 SVG 读回时矩形可能通过父组继承颜色，撤销设置会恢复原来的缺省属性。
 
 ## 3. 注册事务和清单校验
 
