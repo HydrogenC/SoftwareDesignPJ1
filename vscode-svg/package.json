@@ -1,0 +1,38 @@
+{
+  "name": "svg-explorer-outline",
+  "displayName": "SVG Explorer and Outline",
+  "description": "Marks SVG files in Explorer and shows their elements in the native Outline.",
+  "version": "0.1.0",
+  "publisher": "svgframe",
+  "private": true,
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "configurationDefaults": {
+      "workbench.editorAssociations": {
+        "*.svg": "default"
+      }
+    }
+  },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "npm run build && node --test test/svg-outline.test.cjs"
+  },
+  "dependencies": {
+    "saxes": "6.0.0"
+  },
+  "devDependencies": {
+    "@types/vscode": "1.85.0",
+    "typescript": "7.0.2"
+  }
+}
