@@ -5,6 +5,9 @@
   "private": true,
   "type": "module",
   "main": "dist/index.js",
+  "exports": {
+    "./api": "./dist/api.js"
+  },
   "bin": {
     "svg-editor": "dist/index.js"
   },
@@ -12,14 +15,19 @@
     "cli": "tsx src/index.ts",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "test": "npm run build && node --test test/phase1-baseline.test.mjs"
+    "test": "npm run build && node --test test/*.test.mjs",
+    "metrics": "node scripts/cli-metrics.mjs"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@babel/parser": "7.28.5",
     "@types/node": "^26.6.5",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "import-meta-resolve": "4.2.0"
   }
 }

@@ -18,6 +18,10 @@ export abstract class Container extends Shape {
     return this;
   }
 
+  assertCanUngroup(): void {}
+
+  assertCanRemove(_child: Shape): void {}
+
   insertAt(index: number, child: Shape): void {
     child.parent = this;
     this.#children.splice(index, 0, child);

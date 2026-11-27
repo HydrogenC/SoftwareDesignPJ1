@@ -1,0 +1,13 @@
+export { Command, type CommandKind } from './commands/Command.js';
+export type { CommandContext } from './commands/CommandContext.js';
+export { Container } from './svg/Container.js';
+export { Document } from './svg/Document.js';
+export { EditorError } from './svg/EditorError.js';
+export { Shape, type Point } from './svg/Shape.js';
+export type { AttributeEdit } from './extensions/AttributeEdit.js';
+export type { AttributeHandler, AttributeFeedback, AttributeWriter } from './extensions/AttributeHandler.js';
+export type { CommandDefinition } from './extensions/CommandDefinition.js';
+export type { Plugin, PluginContext, PluginManifest } from './extensions/PluginContext.js';
+export type { ShapeCreationContext, ShapeProvider, SvgAttributes, SvgShapeInput } from './extensions/ShapeProvider.js';
+export type { ShapeView } from './extensions/ShapeView.js';
+export type { DocumentEvent, TreeDecorator } from './extensions/TreeDecorator.js';

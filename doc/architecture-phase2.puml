@@ -1,0 +1,48 @@
+@startuml
+skinparam componentStyle rectangle
+
+package "装配处" {
+  component "index.ts" as entry
+  component "PluginConfigLoader" as loader
+  component "PluginHost" as host
+  component "createEditor" as editor
+  artifact "plugins.config.json" as config
+}
+
+package "内核" {
+  component "公开 API 与扩展点" as api
+  component "注册表" as registry
+  component "终端、分发与历史" as cli
+  component "会话、属性事务与树渲染" as session
+  component "SVG 读写与图形工厂" as io
+  component "SVG 领域模型" as svg
+}
+
+package "插件" {
+  component "内置命令与图形" as builtin
+  component "可选插件" as optional
+}
+
+entry --> loader
+entry --> host
+entry --> builtin
+entry ..> optional : 代码装配
+entry --> editor
+loader --> config
+loader --> host
+loader ..> optional : 配置解析后导入
+host --> api
+host --> registry
+editor --> cli
+editor --> session
+editor --> io
+builtin --> api
+optional --> api
+registry --> api
+cli --> api
+cli --> session
+session --> api
+session --> svg
+io --> api
+io --> svg
+@enduml

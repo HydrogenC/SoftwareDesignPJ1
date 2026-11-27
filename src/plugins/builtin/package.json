@@ -1,0 +1,10 @@
+{
+  "name": "@svgframe/plugin-builtin",
+  "private": true,
+  "type": "module",
+  "main": "./BuiltinPlugin.js",
+  "contributes": {
+    "shapes": ["rect", "circle", "ellipse", "line", "text", "g"],
+    "commands": ["init", "read", "save", "canvas", "create", "delete", "move", "scale", "set", "group", "ungroup", "addto", "front", "back", "tree", "show", "help", "undo", "redo"]
+  }
+}

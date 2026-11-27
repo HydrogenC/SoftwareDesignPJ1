@@ -23,11 +23,24 @@ export abstract class Shape {
     return this.#id;
   }
 
-  /** SVG 元素名，同时充当 label 的类型前缀。 */
+  /** 实际序列化使用的 SVG 标签。 */
   abstract get tagName(): string;
 
+  get kind(): string {
+    return this.tagName;
+  }
+
   label(): string {
-    return `${this.tagName}#${this.id}`;
+    return `${this.kind}#${this.id}`;
+  }
+
+  treeLabel(): string {
+    return this.label();
+  }
+
+  creationFeedback(parent: Container | null): string {
+    const result = `${this.label()} created`;
+    return parent === null ? result : `${result} in ${parent.label()}`;
   }
 
   /** 叶子返回空；容器覆写。遍历与排版据此递归，不做 switch。 */

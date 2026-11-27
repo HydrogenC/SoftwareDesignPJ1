@@ -82,14 +82,25 @@ export class Document extends Container {
   reparent(shape: Shape, parent: Container, index: number): void {
     const from = shape.parent;
     if (from === null) throw new EditorError(`no such shape: ${shape.id}`);
+    if (from !== parent) {
+      this.#assertMoveTarget(shape, parent);
+      from.assertCanRemove(shape);
+    }
     from.detach(shape);
     parent.insertAt(index, shape);
+  }
+
+  assertCanExtract(shape: Shape): void {
+    const parent = shape.parent;
+    if (parent === null) throw new EditorError(`no such shape: ${shape.id}`);
+    parent.assertCanRemove(shape);
   }
 
   /** 连同整棵子树摘除并注销。 */
   remove(shape: Shape): void {
     const parent = shape.parent;
     if (parent === null) throw new EditorError(`no such shape: ${shape.id}`);
+    parent.assertCanRemove(shape);
     parent.detach(shape);
     this.#unregister(shape);
   }
@@ -100,11 +111,13 @@ export class Document extends Container {
     const from = shape.parent;
     if (from === null) throw new EditorError(`no such shape: ${shape.id}`);
     if (from === target) return;
+    this.reparent(shape, target, target.children.length);
+  }
+
+  #assertMoveTarget(shape: Shape, target: Container): void {
     if (shape === target || this.isAncestor(shape, target)) {
       throw new EditorError(`cannot move into own descendant: ${shape.id}`);
     }
-    target.attach(shape);
-    from.detach(shape);
   }
 
   isAncestor(ancestor: Shape, node: Shape): boolean {
@@ -123,9 +136,10 @@ export class Document extends Container {
     return container;
   }
 
-  #assertIdFree(shape: Shape): void {
-    if (this.#index.has(shape.id)) throw new EditorError(`id already exists: ${shape.id}`);
-    for (const child of shape.children) this.#assertIdFree(child);
+  #assertIdFree(shape: Shape, seen = new Set<string>()): void {
+    if (this.#index.has(shape.id) || seen.has(shape.id)) throw new EditorError(`id already exists: ${shape.id}`);
+    seen.add(shape.id);
+    for (const child of shape.children) this.#assertIdFree(child, seen);
   }
 
   #register(shape: Shape): void {

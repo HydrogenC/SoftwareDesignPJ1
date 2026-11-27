@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { copyFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -21,37 +21,44 @@ function assertBytesEqual(actual, expected, label) {
 }
 
 for (const { name, inputs, outputs } of sessions) {
-  test(`Phase 1 baseline: ${name}`, () => {
-    const cwd = mkdtempSync(join(tmpdir(), 'svg-cli-baseline-'));
-    try {
-      for (const file of inputs) {
-        copyFileSync(new URL(`input/${file}`, transcripts), join(cwd, file));
-      }
+  for (const mode of ['code', 'config']) {
+    test(`Phase 1 baseline: ${name} (${mode})`, () => replay(name, inputs, outputs, mode));
+  }
+}
 
-      const result = spawnSync(process.execPath, [cli], {
-        cwd,
-        input: readFileSync(new URL(`${name}.txt`, transcripts)),
-        timeout: 10_000,
-      });
-      if (result.error) throw result.error;
-      assert.equal(result.signal, null);
-      assert.equal(result.status, 0, result.stderr.toString('utf8'));
-      assert.equal(result.stderr.length, 0, result.stderr.toString('utf8'));
-      assertBytesEqual(
-        result.stdout,
-        readFileSync(new URL(`expected/${name}.stdout.txt`, transcripts)),
-        `${name} stdout`,
-      );
-
-      for (const file of outputs) {
-        assertBytesEqual(
-          readFileSync(join(cwd, file)),
-          readFileSync(new URL(`expected/${file}`, transcripts)),
-          `${name} saved ${file}`,
-        );
-      }
-    } finally {
-      rmSync(cwd, { recursive: true, force: true });
+function replay(name, inputs, outputs, mode) {
+  const cwd = mkdtempSync(join(tmpdir(), 'svg-cli-baseline-'));
+  try {
+    for (const file of inputs) {
+      copyFileSync(new URL(`input/${file}`, transcripts), join(cwd, file));
     }
-  });
+    const config = 'plugins.config.json';
+    writeFileSync(join(cwd, config), '{"plugins":[]}');
+
+    const args = mode === 'config' ? ['--config', config] : ['--no-plugins'];
+    const result = spawnSync(process.execPath, [cli, ...args], {
+      cwd,
+      input: readFileSync(new URL(`${name}.txt`, transcripts)),
+      timeout: 10_000,
+    });
+    if (result.error) throw result.error;
+    assert.equal(result.signal, null);
+    assert.equal(result.status, 0, result.stderr.toString('utf8'));
+    assert.equal(result.stderr.length, 0, result.stderr.toString('utf8'));
+    assertBytesEqual(
+      result.stdout,
+      readFileSync(new URL(`expected/${name}.stdout.txt`, transcripts)),
+      `${name} stdout`,
+    );
+
+    for (const file of outputs) {
+      assertBytesEqual(
+        readFileSync(join(cwd, file)),
+        readFileSync(new URL(`expected/${file}`, transcripts)),
+        `${name} saved ${file}`,
+      );
+    }
+  } finally {
+    rmSync(cwd, { recursive: true, force: true });
+  }
 }

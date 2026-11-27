@@ -1,11 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { Document } from '../svg/Document.js';
 import { EditorError } from '../svg/EditorError.js';
-import type { ShapeFactory, SvgAttributes } from '../registry/ShapeFactory.js';
+import type { ShapeFactory } from '../registry/ShapeFactory.js';
+import type { Shape } from '../svg/Shape.js';
 
 interface XmlNode {
   tag: string;
-  attrs: SvgAttributes;
+  attrs: Record<string, string>;
   text: string;
   children: XmlNode[];
 }
@@ -67,24 +68,41 @@ export class SvgReader {
     const document = new Document(this.#size(root, 'width', 800), this.#size(root, 'height', 600));
     this.#warnings = [];
     this.#counters = new Map();
-    this.#fill(root, document, undefined);
+    const ids = new Set<string>();
+    this.#reserveExplicitIds(root, ids);
+    for (const shape of this.#readChildren(root, ids)) document.add(shape);
     return { document, warnings: this.#warnings };
   }
 
-  #fill(node: XmlNode, document: Document, parentId: string | undefined): void {
+  #reserveExplicitIds(node: XmlNode, ids: Set<string>): void {
+    const id = node.attrs.id;
+    if (id !== undefined && id !== '') {
+      if (ids.has(id)) throw new EditorError(`id already exists: ${id}`);
+      ids.add(id);
+    }
+    for (const child of node.children) this.#reserveExplicitIds(child, ids);
+  }
+
+  #readChildren(node: XmlNode, ids: Set<string>): Shape[] {
+    const shapes: Shape[] = [];
     for (const child of node.children) {
-      if (!this.#factory.supports(child.tag)) continue;
+      const provider = this.#factory.forSvg(child.tag, child.attrs);
+      if (provider === undefined) continue;
 
       let id = child.attrs.id;
       if (id === undefined || id === '') {
-        id = this.#nextId(child.tag, document);
+        id = this.#nextId(child.tag, ids);
         this.#warnings.push(`assigned id ${id} to unnamed <${child.tag}>`);
       }
 
-      const shape = this.#factory.fromSvg(child.tag, id, child.attrs, child.text.trim());
-      document.add(shape, parentId);
-      this.#fill(child, document, id);
+      shapes.push(this.#factory.fromSvg(provider, {
+        id,
+        attrs: child.attrs,
+        text: child.text.trim(),
+        children: this.#readChildren(child, ids),
+      }));
     }
+    return shapes;
   }
 
   #size(root: XmlNode, name: 'width' | 'height', fallback: number): number {
@@ -93,13 +111,14 @@ export class SvgReader {
     return Number.isFinite(value) ? value : fallback;
   }
 
-  #nextId(tag: string, document: Document): string {
+  #nextId(tag: string, ids: Set<string>): string {
     let n = this.#counters.get(tag) ?? 0;
     let id: string;
     do {
       n += 1;
       id = `${tag}${n}`;
-    } while (document.has(id));
+    } while (ids.has(id));
+    ids.add(id);
     this.#counters.set(tag, n);
     return id;
   }
@@ -176,8 +195,8 @@ export class SvgReader {
     }
   }
 
-  #parseAttributes(): SvgAttributes {
-    const attrs: SvgAttributes = {};
+  #parseAttributes(): Record<string, string> {
+    const attrs: Record<string, string> = Object.create(null) as Record<string, string>;
     for (;;) {
       this.#skipWhitespace();
       if (this.#src.startsWith('/>', this.#pos)) return attrs;

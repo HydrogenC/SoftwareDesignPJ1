@@ -1,20 +1,23 @@
-import { ShapeFactory } from './registry/ShapeFactory.js';
-import { SvgReader } from './io/SvgReader.js';
-import { SvgWriter } from './io/SvgWriter.js';
-import { CommandContext } from './commands/CommandContext.js';
-import { CommandHistory } from './cli/CommandHistory.js';
-import { CommandRouter } from './cli/CommandRouter.js';
-import { TreeFormatter } from './cli/TreeFormatter.js';
+import type { Plugin, PluginManifest } from './api.js';
 import { Repl } from './cli/Repl.js';
+import { createEditor } from './host/createEditor.js';
+import { PluginConfigLoader } from './host/PluginConfigLoader.js';
+import { PluginHost } from './host/PluginHost.js';
+import BuiltinPlugin from './plugins/builtin/BuiltinPlugin.js';
+import manifest from './plugins/builtin/package.json' with { type: 'json' };
 
-const factory = new ShapeFactory();
-const formatter = new TreeFormatter();
-const context = new CommandContext(
-  factory,
-  new SvgReader(factory),
-  new SvgWriter(),
-  root => formatter.render(root),
-);
-const router = new CommandRouter(context, new CommandHistory());
+const codePlugins: readonly { plugin: Plugin; manifest: PluginManifest; options?: unknown }[] = [];
+const report = (message: string): void => console.log(message);
+const host = new PluginHost(report);
+await host.load(new BuiltinPlugin(), manifest);
 
-await new Repl(router).run();
+const args = process.argv.slice(2);
+if (args[0] === '--config') {
+  const path = args[1];
+  if (path === undefined || args.length !== 2) report('error: invalid plugin config');
+  else await new PluginConfigLoader(host, report).load(path);
+} else if (args[0] !== '--no-plugins') {
+  for (const { plugin, manifest, options } of codePlugins) await host.load(plugin, manifest, options);
+}
+
+await new Repl(createEditor(host.registrations, report)).run();

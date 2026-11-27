@@ -130,3 +130,49 @@ code --user-data-dir "$svgTestProfile" --extensions-dir "$svgTestProfile/extensi
 ### AI 建议检查记录
 
 初版根据 API 设计了 `DocumentSymbol.selectionRange` 并通过宿主测试，但实际点击原生大纲时打开了 VS Code 的 SVG 图片预览。根据界面结果修正扩展清单，由扩展贡献 SVG 的文本编辑器默认关联。随后在宿主测试中加上默认编辑器检查，并在界面重新点击 `rect#start` 确认跳到源码。
+
+## Phase 2 · CLI 插件框架
+
+[Phase 1 模块依赖图](architecture.puml)与 [Phase 2 模块依赖图](architecture-phase2.puml)标出重构前后的依赖方向。[ADR](cli-plugin-adr.md)记录属性事务、读回与结构约束、注册与清单校验。[指标报告](../docs/metrics/framework.md)由 Git 数据生成。
+
+### 扩展点清单
+
+内置命令和六种基础图形由 [builtin 插件](../src/plugins/builtin/package.json)提供，随 CLI 启动。下表列出 M2 已接入的实现，测试插件见 [框架测试](../test/plugin-framework.test.mjs)。
+
+| 接口 | 职责和内核调用位置 | 实现 | 禁用可选插件后的行为 | 契约错误 |
+| --- | --- | --- | --- | --- |
+| `ShapeProvider` | [ShapeFactory.ts](../src/registry/ShapeFactory.ts) 的 `create`、`forSvg`、`fromSvg` 负责创建和读回，由 [SvgReader.ts](../src/io/SvgReader.ts) 的 `#readChildren` 调用读回路径 | `BuiltinShapeProvider` 的六个实例。测试用 `CompositeProvider` | 基础六种类型可创建。未注册类型的 `create` 报 `error: unknown shape type`，读回先按 SVG 标签查找，未知标签跳过 | 返回的图形须与请求的 ID、类型、SVG 标签一致，且尚未挂入父容器。读回返回已带子节点的图形时，报 `error: shape provider <name> failed: ...` |
+| `Command`、`CommandDefinition` | [CommandRouter.ts](../src/cli/CommandRouter.ts) 的 `run` 从注册表构造命令，`CommandHistory.execute` 执行。`EditorSession.helpLines` 读取命令提供的文案 | 所有 Phase 1 命令，包括 `undo`、`redo`。测试用 `SampleDefinition` 和 `SampleCommand` | 命令名、输出格式和历史行为沿用 Phase 1。缺少注册时执行报 `error: unknown command: <name>`，帮助中不显示 | 返回值须为 `Command` 实例且类别有效，`help` 须返回字符串。违反时报 `error: command <name> failed: ...` |
+| `TreeDecorator` | [TreeFormatter.ts](../src/cli/TreeFormatter.ts) 的 `#suffix` 在排版后追加标签。[EditorSession.ts](../src/commands/EditorSession.ts) 的 `#publish` 提供新建、读入和保存事件 | 测试用两个独立 `TreeLabel` 实例 | 树输出逐字节保留 Phase 1 排版 | 返回多行或非字符串值，或抛出异常，报告 `error: tree decorator <name> failed: ...` |
+| `AttributeHandler` | [AttributeEdit.ts](../src/extensions/AttributeEdit.ts) 的 `apply` 选择处理器并记录事务，由 `EditorSession.setAttribute` 提供给 `set` | 测试用 `PaintHandler` | 命中为空时沿用图形属性白名单。未知属性报 `error: unknown attribute: <attr>` | 多个处理器命中时报 `error: conflicting attribute handlers ...`。处理器异常会回滚已完成的属性更新。普通异常报告 `error: attribute handler <name> failed: ...` |
+
+扩展点的注册错误统一由 [PluginHost.ts](../src/host/PluginHost.ts) 的 `load` 处理。同类名称重复报 `error: duplicate registration: <category>/<name>`。清单和实际注册集合不符时报 `error: plugin manifest mismatch: ...`，激活异常时报 `error: plugin failed to activate: ...`。三种失败都丢弃这次激活的全部注册。
+
+### 两种装配方式
+
+先用 `npm ci` 安装依赖，再用 `npm run build` 构建。内置插件总是先加载。可选插件的代码装配集中在 [src/index.ts](../src/index.ts) 的 `codePlugins`，每项传入插件实例、清单和可选的 `options`。外部插件通过 `svg-editor/api` 使用公开接口，仓内插件也可以相对导入 `src/api.ts` 的编译对应路径。
+
+```sh
+node dist/index.js
+node dist/index.js --no-plugins
+node dist/index.js --config plugins.config.json
+```
+
+`--no-plugins` 只加载内置插件。`--config` 使用配置项决定可选插件集合。将下面的 `module` 值替换成已安装的模块名，或相对配置目录的编译后入口文件或包目录。目录由其 `package.json` 的 `main` 指定入口，包名按 ESM 包解析。两种路径都要求模块默认导出带 `activate` 的实例，`package.json` 的 `contributes` 可声明 `shapes`、`commands`、`decorators`、`attributes` 四类名称列表，缺省为空。宿主把 `options` 原值传到 `activate` 的第二个参数。
+
+```json
+{
+  "plugins": [
+    { "module": "@example/plugin", "options": { "prefix": "demo" } },
+    { "module": "./dist/plugins/other", "enabled": false }
+  ]
+}
+```
+
+配置全部解析成功后才开始加载。如果配置语法或结构非法，输出 `error: invalid plugin config` 并以默认内置能力启动。模块找不到或没有默认导出时也会报告错误，并继续加载后续条目。
+
+`npm test` 在代码和空配置两种装配下逐字节比较 Phase 1 的标准输出和保存的 SVG。框架测试覆盖四个接口、注册回滚、双装配一致性、属性事务和复合结构保护。
+
+### AI 建议检查记录
+
+检查 Phase 1 采集的 `help` 后，保留了内置注册顺序和命令间的分段换行。属性事务增加了先撤销创建、再重做创建和属性修改的测试，确认重做按 ID 寻址能更新新建实例。
