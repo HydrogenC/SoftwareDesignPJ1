@@ -137,12 +137,12 @@ code --user-data-dir "$svgTestProfile" --extensions-dir "$svgTestProfile/extensi
 
 ### 扩展点清单
 
-内置命令和六种基础图形由 [builtin 插件](../src/plugins/builtin/package.json)提供，随 CLI 启动。下表列出 M2 已接入的实现，测试插件见 [框架测试](../test/plugin-framework.test.mjs)。
+内置命令和六种基础图形由 [builtin 插件](../src/plugins/builtin/package.json)提供，随 CLI 启动。测试插件见 [框架测试](../test/plugin-framework.test.mjs)。
 
 | 接口 | 职责和内核调用位置 | 实现 | 禁用可选插件后的行为 | 契约错误 |
 | --- | --- | --- | --- | --- |
 | `ShapeProvider` | [ShapeFactory.ts](../src/registry/ShapeFactory.ts) 的 `create`、`forSvg`、`fromSvg` 负责创建和读回，由 [SvgReader.ts](../src/io/SvgReader.ts) 的 `#readChildren` 调用读回路径 | `BuiltinShapeProvider` 的六个实例。测试用 `CompositeProvider` | 基础六种类型可创建。未注册类型的 `create` 报 `error: unknown shape type`，读回先按 SVG 标签查找，未知标签跳过 | 返回的图形须与请求的 ID、类型、SVG 标签一致，且尚未挂入父容器。读回返回已带子节点的图形时，报 `error: shape provider <name> failed: ...` |
-| `Command`、`CommandDefinition` | [CommandRouter.ts](../src/cli/CommandRouter.ts) 的 `run` 从注册表构造命令，`CommandHistory.execute` 执行。`EditorSession.helpLines` 读取命令提供的文案 | 所有 Phase 1 命令，包括 `undo`、`redo`。测试用 `SampleDefinition` 和 `SampleCommand` | 命令名、输出格式和历史行为沿用 Phase 1。缺少注册时执行报 `error: unknown command: <name>`，帮助中不显示 | 返回值须为 `Command` 实例且类别有效，`help` 须返回字符串。违反时报 `error: command <name> failed: ...` |
+| `Command`、`CommandDefinition` | [CommandRouter.ts](../src/cli/CommandRouter.ts) 的 `run` 从注册表构造命令，`CommandHistory.execute` 执行。`EditorSession.helpLines` 读取命令提供的文案 | 所有 Phase 1 命令，包括 `undo`、`redo`，以及可选的 `stats` 和 `dir`。测试用 `SampleDefinition` 和 `SampleCommand` | 命令名、输出格式和历史行为沿用 Phase 1。缺少注册时执行报 `error: unknown command: <name>`，帮助中不显示 | 返回值须为 `Command` 实例且类别有效，`help` 须返回字符串。违反时报 `error: command <name> failed: ...` |
 | `TreeDecorator` | [TreeFormatter.ts](../src/cli/TreeFormatter.ts) 的 `#suffix` 在排版后追加标签。[EditorSession.ts](../src/commands/EditorSession.ts) 的 `#publish` 提供新建、读入和保存事件 | 测试用两个独立 `TreeLabel` 实例 | 树输出逐字节保留 Phase 1 排版 | 返回多行或非字符串值，或抛出异常，报告 `error: tree decorator <name> failed: ...` |
 | `AttributeHandler` | [AttributeEdit.ts](../src/extensions/AttributeEdit.ts) 的 `apply` 选择处理器并记录事务，由 `EditorSession.setAttribute` 提供给 `set` | 测试用 `PaintHandler` | 命中为空时沿用图形属性白名单。未知属性报 `error: unknown attribute: <attr>` | 多个处理器命中时报 `error: conflicting attribute handlers ...`。处理器异常会回滚已完成的属性更新。普通异常报告 `error: attribute handler <name> failed: ...` |
 
@@ -150,7 +150,7 @@ code --user-data-dir "$svgTestProfile" --extensions-dir "$svgTestProfile/extensi
 
 ### 两种装配方式
 
-先用 `npm ci` 安装依赖，再用 `npm run build` 构建。内置插件总是先加载。可选插件的代码装配集中在 [src/index.ts](../src/index.ts) 的 `codePlugins`，每项传入插件实例、清单和可选的 `options`。外部插件通过 `svg-editor/api` 使用公开接口，仓内插件也可以相对导入 `src/api.ts` 的编译对应路径。
+先用 `npm ci` 安装依赖，再用 `npm run build` 构建。内置插件总是先加载。可选插件的代码装配集中在 [src/index.ts](../src/index.ts) 的 `codePlugins`，每项提供导入模块的函数和可选的 `options`。模块提供默认导出的插件实例与 `manifest`，CLI 按数组顺序导入并注册。外部插件通过 `svg-editor/api` 使用公开接口，仓内插件也可以相对导入 `src/api.ts` 的编译对应路径。
 
 ```sh
 node dist/index.js
@@ -158,7 +158,9 @@ node dist/index.js --no-plugins
 node dist/index.js --config plugins.config.json
 ```
 
-`--no-plugins` 只加载内置插件。`--config` 使用配置项决定可选插件集合。将下面的 `module` 值替换成已安装的模块名，或相对配置目录的编译后入口文件或包目录。目录由其 `package.json` 的 `main` 指定入口，包名按 ESM 包解析。两种路径都要求模块默认导出带 `activate` 的实例，`package.json` 的 `contributes` 可声明 `shapes`、`commands`、`decorators`、`attributes` 四类名称列表，缺省为空。宿主把 `options` 原值传到 `activate` 的第二个参数。
+`npm run cli` 也可启动 CLI，运行前会自动构建。代码与配置装配均使用编译后的公开 API，保证宿主和插件共享同一份 `Command` 基类。从其他工作目录启动时，可直接用 `node` 执行编译入口的绝对路径。
+
+`--no-plugins` 只加载内置插件。`--config` 使用配置项决定可选插件集合。仓库的 [plugins.config.json](../plugins.config.json) 与当前代码装配按相同顺序启用 `stats` 和 `dir`。给任一项设置 `enabled: false` 即可单独禁用。`module` 支持已安装的模块名，以及相对配置目录的编译后入口文件或包目录。目录由其 `package.json` 的 `main` 指定入口，包名按 ESM 包解析。两种路径都要求模块默认导出带 `activate` 的实例，`package.json` 的 `contributes` 可声明 `shapes`、`commands`、`decorators`、`attributes` 四类名称列表，缺省为空。宿主把 `options` 原值传到 `activate` 的第二个参数。
 
 ```json
 {
@@ -171,8 +173,20 @@ node dist/index.js --config plugins.config.json
 
 配置全部解析成功后才开始加载。如果配置语法或结构非法，输出 `error: invalid plugin config` 并以默认内置能力启动。模块找不到或没有默认导出时也会报告错误，并继续加载后续条目。
 
-`npm test` 在代码和空配置两种装配下逐字节比较 Phase 1 的标准输出和保存的 SVG。框架测试覆盖四个接口、注册回滚、双装配一致性、属性事务和复合结构保护。
+`npm test` 使用 `--no-plugins` 和空配置逐字节比较 Phase 1 的标准输出和保存的 SVG。框架测试覆盖四个接口、注册回滚、双装配一致性、属性事务和复合结构保护。
+
+### 命令插件
+
+- [stats](../src/plugins/stats/StatsPlugin.ts) 从画布子节点开始按当前顺序深度优先遍历，以叶子类型首次出现的顺序输出计数。容器（包括空容器）单独计数，容器中的叶子照常统计。使用前先 `init` 或 `read`。
+- [dir](../src/plugins/dir/DirPlugin.ts) 无需打开文档，使用进程当前工作目录，包含其隐藏子项。目录和其余条目分别按名称的 UTF-16 码元顺序升序排列，区分大小写。符号链接和其他非目录条目统一显示为 `[FILE]`，命令不跟随链接。
+- 两条命令都不接收参数。目录访问出错时输出 `error: cannot read directory: <path>`。如果进程无法取得工作目录的绝对路径，错误中的路径显示为 `.`。
+
+[目录访问接口与实现](../src/plugins/dir/DirectoryAccess.ts)都位于 `dir` 插件中。适配器模式里的客户端 `DirCommand` 通过构造器接收目标接口 `DirectoryAccess`，使用 `currentPath()` 与 `list(path)` 取得待显示的条目。对象适配器 `NodeDirectoryAccess` 调用被适配的 Node.js `process.cwd()` 和 `fs.readdirSync()`，将 `Dirent` 转成只含名称和目录标记的 `DirectoryEntry`。注入发生在 `DirPlugin`，代码与配置装配均使用同一份默认实例，独立测试可注入目录访问替身。
+
+构建后可用 `node --test test/stats.test.mjs test/dir.test.mjs` 运行独立测试。[命令集成测试](../test/command-plugins.test.mjs)使用固定临时目录和 [回放会话](transcript/command-plugins.txt)逐字节比较双装配输出，并验证选择性启用、读写前后目录一致，以及 `dir` 成功和失败时的文档与历史。
 
 ### AI 建议检查记录
 
 检查 Phase 1 采集的 `help` 后，保留了内置注册顺序和命令间的分段换行。属性事务增加了先撤销创建、再重做创建和属性修改的测试，确认重做按 ID 寻址能更新新建实例。
+
+检查命令插件装配时，将入口的静态插件导入改成按分支导入，使配置禁用的插件无需加载模块。为避免源码入口和编译后的插件分别加载各自的 `Command` 基类，`npm run cli` 统一使用编译入口。核对命令回放时，按已有 `CreateCommand.undo()` 的回显将预期修正为 `rect#r2 removed`。

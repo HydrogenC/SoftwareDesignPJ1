@@ -1,0 +1,33 @@
+svg-editor 0.1 — type 'help' for commands
+
+[DIR]  docs
+[DIR]  plugins
+[FILE]  .env
+[FILE]  demo.svg
+[FILE]  package.json
+canvas 800x600 created
+(total 0, containers 0)
+rect#r1 created
+circle#c1 created
+g#g1 created with 1 child
+text#t1 created
+rect#r2 created in g#g1
+rect: 2  circle: 1  text: 1  (total 4, containers 1)
+rect#r2 removed
+rect: 1  circle: 1  text: 1  (total 3, containers 1)
+[DIR]  docs
+[DIR]  plugins
+[FILE]  .env
+[FILE]  demo.svg
+[FILE]  package.json
+rect#r2 created in g#g1
+rect: 2  circle: 1  text: 1  (total 4, containers 1)
+warning: assigned id rect1 to unnamed <rect>
+read docs/other.svg (7 elements)
+[DIR]  docs
+[DIR]  plugins
+[FILE]  .env
+[FILE]  demo.svg
+[FILE]  package.json
+rect: 2  text: 1  circle: 2  ellipse: 1  (total 6, containers 1)
+error: undo not allowed after io command

@@ -1,0 +1,19 @@
+# List the process working directory before opening a document.
+dir
+init
+stats
+create rect r1 0 0 10 10
+create circle c1 5 5 3
+group g1 c1
+create text t1 0 20 "hello"
+create rect r2 0 0 5 5 in g1
+stats
+undo
+stats
+dir
+redo
+stats
+read docs/other.svg
+dir
+stats
+undo

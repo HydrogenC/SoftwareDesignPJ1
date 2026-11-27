@@ -12,7 +12,8 @@
     "svg-editor": "dist/index.js"
   },
   "scripts": {
-    "cli": "tsx src/index.ts",
+    "precli": "npm run build",
+    "cli": "node dist/index.js",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "test": "npm run build && node --test test/*.test.mjs",

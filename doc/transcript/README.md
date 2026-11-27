@@ -11,3 +11,7 @@
 [`input/`](input/) 存放读入用的 SVG。[`expected/`](expected/) 存放各会话的标准输出和保存生成的 SVG。测试为每个会话创建独立的临时工作目录，检查退出状态、标准错误，以及输出与 SVG 的逐字节一致性。
 
 预期文件从 Git 标签 `phase1-final`（`d1e8578d5f42276c8b7734821cda6233f672645c`）导出并编译后实测采集。Phase 2 题面用 `final` 指代该基线。§6.1 版本 A 的树缩进对齐和 `stroke=black` 以实际回放结果为准。会话使用管道输入，输出包含启动横幅。仓库固定这些文本和 SVG 的行尾为 LF。
+
+## Phase 2 命令插件会话
+
+[command-plugins.txt](command-plugins.txt) 覆盖未初始化时的 `dir`、空画布和嵌套图形的 `stats`、撤销和重做，以及从子目录读入 SVG。[预期标准输出](expected/command-plugins.stdout.txt)包含 `dir` 的排序结果和 `read` 后的历史锁回显。测试在同一个固定临时目录下分别用代码和配置装配回放，子目录里的 `other.svg` 来自 [input/other.svg](input/other.svg)，标准输出由测试进程从管道采集。
