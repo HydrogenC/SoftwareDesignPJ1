@@ -1,20 +1,20 @@
 # CLI 重构指标
 
-基线 `phase1-final`，目标 `--worktree`。
+基线 `phase1-final`，目标 `3964c4b`。
 
 | 分类 | 基线行数 | 目标行数 | 增量 | 基线圈复杂度 | 目标圈复杂度 | 增量 |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | 内核 | 2045 | 1368 | -677 | 430 | 331 | -99 |
-| 装配处 | 20 | 312 | +292 | 1 | 120 | +119 |
-| 插件 | 0 | 1064 | +1064 | 0 | 215 | +215 |
+| 装配处 | 20 | 328 | +308 | 1 | 124 | +123 |
+| 插件 | 0 | 1434 | +1434 | 0 | 300 | +300 |
 | VS Code 扩展 | 0 | 176 | +176 | 0 | 26 | +26 |
-| CLI 合计 | 2065 | 2744 | +679 | 431 | 666 | +235 |
+| CLI 合计 | 2065 | 3130 | +1065 | 431 | 755 | +324 |
 
 ## 运行文件与职责
 
 | 分类 | 文件 | 职责 | 基线行数 / 圈复杂度 | 目标行数 / 圈复杂度 |
 | --- | --- | --- | ---: | ---: |
-| 装配处 | `plugins.config.json` | 可选插件清单 | — | 3 / 0 |
+| 装配处 | `plugins.config.json` | 可选插件清单 | — | 8 / 0 |
 | 内核 | `src/api.ts` | 插件公开 API | — | 13 / 0 |
 | 内核 | `src/cli/CommandHistory.ts` | 编辑执行、撤销重做与 IO 锁 | 45 / 11 | 50 / 13 |
 | 内核 | `src/cli/CommandRouter.ts` | 按注册名分发命令 | 69 / 7 | 32 / 9 |
@@ -54,9 +54,12 @@
 | 装配处 | `src/host/PluginConfigLoader.ts` | 配置验证、模块解析与动态导入 | — | 120 / 43 |
 | 装配处 | `src/host/PluginHost.ts` | 激活、清单验证和注册事务 | — | 142 / 69 |
 | 装配处 | `src/host/createEditor.ts` | 构建 CLI 会话及服务 | — | 24 / 2 |
-| 装配处 | `src/index.ts` | CLI 入口与组合根 | 20 / 1 | 23 / 6 |
+| 装配处 | `src/index.ts` | CLI 入口与组合根 | 20 / 1 | 34 / 10 |
 | 内核 | `src/io/SvgReader.ts` | 解析 SVG、分配 ID 和构造子树 | 212 / 58 | 231 / 64 |
 | 内核 | `src/io/SvgWriter.ts` | 输出 SVG 和文件写入 | 54 / 12 | 54 / 12 |
+| 插件 | `src/plugins/box/Box.ts` | 复合图形模型与子部件结构约束 | — | 41 / 12 |
+| 插件 | `src/plugins/box/BoxPlugin.ts` | 框体创建与读回、属性处理和类型标签 | — | 100 / 23 |
+| 插件 | `src/plugins/box/package.json` | 包与扩展声明 | — | 10 / 0 |
 | 插件 | `src/plugins/builtin/BuiltinPlugin.ts` | 内置插件声明与注册 | — | 72 / 8 |
 | 插件 | `src/plugins/builtin/BuiltinShapeProvider.ts` | 内置插件声明与注册 | — | 93 / 29 |
 | 插件 | `src/plugins/builtin/commands/AddToCommand.ts` | 内置命令与逆操作 | — | 36 / 5 |
@@ -85,6 +88,13 @@
 | 插件 | `src/plugins/builtin/shapes/Line.ts` | 内置图形模型 | — | 71 / 12 |
 | 插件 | `src/plugins/builtin/shapes/Rect.ts` | 内置图形模型 | — | 69 / 12 |
 | 插件 | `src/plugins/builtin/shapes/Text.ts` | 内置图形模型 | — | 68 / 14 |
+| 插件 | `src/plugins/dir/DirPlugin.ts` | 注册目录命令并排序、格式化条目 | — | 61 / 16 |
+| 插件 | `src/plugins/dir/DirectoryAccess.ts` | 目录访问契约与 Node.js 文件系统适配器 | — | 25 / 3 |
+| 插件 | `src/plugins/dir/package.json` | 包与扩展声明 | — | 8 / 0 |
+| 插件 | `src/plugins/modified-star/ModifiedStarPlugin.ts` | 保存基准与树行未保存标记 | — | 56 / 22 |
+| 插件 | `src/plugins/modified-star/package.json` | 包与扩展声明 | — | 8 / 0 |
+| 插件 | `src/plugins/stats/StatsPlugin.ts` | 注册命令并按类型统计叶子和容器 | — | 53 / 9 |
+| 插件 | `src/plugins/stats/package.json` | 包与扩展声明 | — | 8 / 0 |
 | 内核 | `src/registry/ShapeFactory.ts` | 图形构造与反序列化分发 | 170 / 31 | 49 / 23 |
 | 内核 | `src/svg/Circle.ts` | SVG 领域模型 | 62 / 11 | — |
 | 内核 | `src/svg/Container.ts` | SVG 领域模型 | 46 / 12 | 50 / 14 |
@@ -96,8 +106,8 @@
 | 内核 | `src/svg/Rect.ts` | SVG 领域模型 | 69 / 12 | — |
 | 内核 | `src/svg/Shape.ts` | SVG 领域模型 | 147 / 34 | 160 / 38 |
 | 内核 | `src/svg/Text.ts` | SVG 领域模型 | 68 / 14 | — |
-| VS Code 扩展 | `vscode-svg/package.json` | 包与扩展声明 | — | 38 / 0 |
-| VS Code 扩展 | `vscode-svg/src/SvgDocumentSymbolProvider.ts` | VS Code 文件装饰与大纲 | — | 30 / 7 |
-| VS Code 扩展 | `vscode-svg/src/SvgFileDecorationProvider.ts` | VS Code 文件装饰与大纲 | — | 41 / 10 |
-| VS Code 扩展 | `vscode-svg/src/SvgOutlineParser.ts` | VS Code 文件装饰与大纲 | — | 52 / 8 |
-| VS Code 扩展 | `vscode-svg/src/extension.ts` | VS Code 文件装饰与大纲 | — | 15 / 1 |
+| VS Code 扩展 | `vscode-svg/package.json` | 扩展激活条件与 SVG 编辑器默认关联 | — | 38 / 0 |
+| VS Code 扩展 | `vscode-svg/src/SvgDocumentSymbolProvider.ts` | 转换解析结果为带源码范围的大纲节点 | — | 30 / 7 |
+| VS Code 扩展 | `vscode-svg/src/SvgFileDecorationProvider.ts` | 识别 SVG 文件并返回 Explorer 徽标 | — | 41 / 10 |
+| VS Code 扩展 | `vscode-svg/src/SvgOutlineParser.ts` | 解析 XML 层级并记录源码位置 | — | 52 / 8 |
+| VS Code 扩展 | `vscode-svg/src/extension.ts` | 注册两项扩展能力并管理订阅 | — | 15 / 1 |

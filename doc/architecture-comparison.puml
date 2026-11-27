@@ -1,0 +1,46 @@
+@startuml
+!pragma layout smetana
+skinparam dpi 140
+skinparam componentStyle rectangle
+skinparam defaultFontName "Microsoft YaHei"
+skinparam shadowing false
+skinparam ArrowColor #526477
+skinparam PackageBorderColor #718096
+skinparam ComponentBorderColor #54728B
+skinparam ComponentBackgroundColor #F1F6FA
+
+title SVG CLI 架构演进
+
+package "Phase 1 · 内置实现" as phase1 {
+  component "CLI 入口" as entry1
+  component "命令路由\n内置命令表" as router1
+  component "SVG 读回" as reader1
+  component "图形工厂\n内置类型表" as factory1
+  component "SVG 领域模型" as model1
+
+  entry1 -down-> router1
+  entry1 -down-> reader1
+  reader1 -down-> factory1
+  router1 -down-> model1
+  factory1 -down-> model1
+}
+
+package "Phase 2 · 插件装配" as phase2 {
+  component "代码装配 / JSON 配置" as entry2
+  component "PluginHost\n注册与清单校验" as host2
+  component "内置插件 / 可选插件" as plugins2
+  component "扩展注册表" as registry2
+  component "四个公开扩展点" as api2
+  component "CLI 内核\n分发、图形工厂、历史、树渲染" as core2
+
+  entry2 -down-> host2 : 交给宿主
+  entry2 .down.> plugins2 : 选择与加载
+  host2 -down-> registry2 : 校验后注册
+  plugins2 .down.> api2 : 实现
+  registry2 -[hidden]down-> core2
+  core2 -up-> registry2 : 查找扩展
+  core2 .up.> api2 : 按接口调用
+}
+
+phase1 -[hidden]right-> phase2
+@enduml

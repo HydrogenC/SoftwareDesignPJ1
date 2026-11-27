@@ -4,10 +4,10 @@
 
 行数含空行与注释。圈复杂度通过 TypeScript AST 统计。每个具体函数或方法起始值为 1，加上条件、循环、`catch`、三元表达式、逻辑运算及每个非默认 `case`。模块顶层仅计分支。JSON 的圈复杂度为 0。
 
-在仓库根目录用以下命令生成 [M2 首份报告](framework.md)。`--worktree` 通过临时 Git 索引创建候审文件树，仓库的暂存区保持原样。
+仓库的 Phase 1 基线标签是 `phase1-final`，对应题面中的 `final`。[指标报告](final.md)使用当前 Phase 2 运行源码所在的提交 `3964c4b` 生成。打上最终标签后，在仓库根目录用以下命令按标签重新生成。
 
 ```sh
-npm run metrics -- phase1-final --worktree docs/metrics/framework.md
+npm run metrics -- phase1-final p2 docs/metrics/final.md
 ```
 
-也可以传入提交哈希或标签。最终交付时传入 `phase1-final` 和 `p2`。已有基线标签的名称是 `phase1-final`。
+脚本接受两个 Git 提交或标签。框架完成时的首份报告可用 `git show 9e872c3:docs/metrics/framework.md` 查看。

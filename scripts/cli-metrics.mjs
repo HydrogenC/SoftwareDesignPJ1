@@ -1,8 +1,6 @@
 import { parse } from '@babel/parser';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, rmdirSync, unlinkSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const cwd = fileURLToPath(new URL('../', import.meta.url));
@@ -45,24 +43,21 @@ const fileRoles = {
   'src/io/SvgReader.ts': '解析 SVG、分配 ID 和构造子树',
   'src/io/SvgWriter.ts': '输出 SVG 和文件写入',
   'src/svg/Document.ts': '画布、节点索引和结构编辑',
+  'src/plugins/stats/StatsPlugin.ts': '注册命令并按类型统计叶子和容器',
+  'src/plugins/dir/DirPlugin.ts': '注册目录命令并排序、格式化条目',
+  'src/plugins/dir/DirectoryAccess.ts': '目录访问契约与 Node.js 文件系统适配器',
+  'src/plugins/box/Box.ts': '复合图形模型与子部件结构约束',
+  'src/plugins/box/BoxPlugin.ts': '框体创建与读回、属性处理和类型标签',
+  'src/plugins/modified-star/ModifiedStarPlugin.ts': '保存基准与树行未保存标记',
+  'vscode-svg/package.json': '扩展激活条件与 SVG 编辑器默认关联',
+  'vscode-svg/src/extension.ts': '注册两项扩展能力并管理订阅',
+  'vscode-svg/src/SvgFileDecorationProvider.ts': '识别 SVG 文件并返回 Explorer 徽标',
+  'vscode-svg/src/SvgDocumentSymbolProvider.ts': '转换解析结果为带源码范围的大纲节点',
+  'vscode-svg/src/SvgOutlineParser.ts': '解析 XML 层级并记录源码位置',
 };
 
-function git(args, env = process.env) {
-  return execFileSync('git', args, { cwd, env, encoding: 'utf8' });
-}
-
-function workingTree() {
-  const directory = mkdtempSync(join(tmpdir(), 'svg-git-index-'));
-  const index = join(directory, 'index');
-  const env = { ...process.env, GIT_INDEX_FILE: index };
-  try {
-    git(['read-tree', 'HEAD'], env);
-    git(['-c', 'core.autocrlf=false', '-c', 'core.safecrlf=false', 'add', '-A', '--', 'src', 'vscode-svg', 'plugins.config.json'], env);
-    return git(['write-tree'], env).trim();
-  } finally {
-    if (existsSync(index)) unlinkSync(index);
-    rmdirSync(directory);
-  }
+function git(args) {
+  return execFileSync('git', args, { cwd, encoding: 'utf8' });
 }
 
 function group(path) {
@@ -110,7 +105,7 @@ function delta(before, after) {
 
 function report(beforeRef, afterRef) {
   const before = measure(git(['rev-parse', `--verify`, `${beforeRef}^{tree}`]).trim());
-  const after = measure(afterRef === '--worktree' ? workingTree() : git(['rev-parse', '--verify', `${afterRef}^{tree}`]).trim());
+  const after = measure(git(['rev-parse', '--verify', `${afterRef}^{tree}`]).trim());
   const lines = [
     '# CLI 重构指标',
     '',

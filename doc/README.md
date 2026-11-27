@@ -80,7 +80,7 @@
 - 静态检查与构建：`npm run typecheck`、`npm run build` 均通过。TypeScript 启用了 `strict`、`noUncheckedIndexedAccess`、`noImplicitOverride`、`exactOptionalPropertyTypes`；编译产物也用 `node dist/index.js` 实际启动过。
 - 规范回归：把规范第 6 节的完整对话逐条回放，对照 banner、tree 对齐、命令回显、undo/redo 结果和 save 后的历史锁，输出与题面一致。
 - 组合与边界场景：覆盖了 group 跨父节点、ungroup/addto/front/back 的撤销、canvas 改尺寸后的锁、read 缺 id 的自动编号与警告、未知标签跳过、实体转义、save/read 往返，以及文档中列出的错误消息。
-- 可视验证：生成了 `examples/minimal.svg`、`examples/demo.svg`、`examples/flowchart.svg`，用浏览器打开确认结构正确。
+- 可视验证：用浏览器打开了 [最小示例](../examples/minimal.svg)、[基本命令会话的 SVG](transcript/expected/demo.svg) 和 [流程图会话的 SVG](transcript/expected/flowchart.svg)，确认结构正确。
 - Phase 1 回归基线可用 `npm test` 自动验证。会话、输入 SVG 和预期输出均已固化在 [doc/transcript](transcript/README.md)。
 
 ## Phase 2 · VS Code SVG 扩展
@@ -105,7 +105,7 @@ code "--extensionDevelopmentPath=$PWD/vscode-svg" "$PWD/vscode-svg/demo"
 | --- | --- |
 | 查看 Explorer | 只有 `example.svg` 显示 `[]`，`folder.svg` 目录和 `plain.txt` 无标记。示例 SVG 的名称和磁盘内容保持原样。[文件标记截图](images/vscode-svg-badge.jpg) |
 | 展开 Outline，点击 `rect#start` | 显示根 `svg`、`g#flowchart`、`g#entry` 和其下的 `rect#start`、`text`。点击矩形后光标跳到第 5 行第 8 列的标签名。[源码定位截图](images/vscode-svg-outline.jpg) |
-| 在编辑器把 `id="start"` 改为 `id="begin"` | 未保存时，大纲已更新为 `rect#begin`。[编辑刷新截图](images/vscode-svg-outline-updated.jpg) |
+| 在编辑器把 `id="start"` 改为 `id="begin"` | 未保存时，大纲已更新为 `rect#begin`。自动复现见 [真实宿主测试](../vscode-svg/test/extension-host.cjs)。 |
 | 暂时删除末尾 `</svg>` 的 `>`，再撤销 | 不完整时大纲清空，撤销后重新显示完整树，编辑器仍可继续操作。[不完整 XML 截图](images/vscode-svg-outline-incomplete.jpg) |
 
 `npm --prefix vscode-svg test` 运行解析测试，覆盖嵌套、无 id 节点、UTF-16 源码偏移以及不完整 XML 后重新解析。真实宿主测试还会从 VS Code 请求符号，验证默认文本编辑器、未保存编辑后的符号刷新和文件类型。下面是 PowerShell 下的运行命令，使用独立测试配置目录。
@@ -133,7 +133,7 @@ code --user-data-dir "$svgTestProfile" --extensions-dir "$svgTestProfile/extensi
 
 ## Phase 2 · CLI 插件框架
 
-[Phase 1 模块依赖图](architecture.puml)与 [Phase 2 模块依赖图](architecture-phase2.puml)标出重构前后的依赖方向。[ADR](cli-plugin-adr.md)记录属性事务、读回与结构约束、注册与清单校验以及未保存标记。[指标报告](../docs/metrics/framework.md)由 Git 数据生成。
+[Phase 2 迭代报告](phase2-report.md)汇总架构对比和验收结果。[Phase 1 模块依赖图](architecture.puml)与 [Phase 2 模块依赖图](architecture-phase2.puml)标出重构前后的依赖方向。[ADR](cli-plugin-adr.md)记录属性事务、读回与结构约束、注册与清单校验以及未保存标记。[最终指标](../docs/metrics/final.md)由 Git 数据生成。
 
 ### 扩展点清单
 
